@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>큐브 전개도 인쇄</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="print-page">
+    <header class="topbar no-print">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>큐브 전개도</h1>
+          <p>풀 날개를 포함해 인쇄한 뒤, 실선을 자르고 점선을 접으세요.</p>
+        </div>
+      </div>
+      <nav class="top-actions">
+        <button class="btn ghost" id="qr-open" type="button">태블릿 QR</button>
+        <a class="btn ghost" href="/">스튜디오</a>
+        <button class="btn primary" type="button" onclick="window.print()">인쇄</button>
+      </nav>
+    </header>
+
+    <main class="print-wrap">
+      <div class="cube-net" aria-label="풀 날개가 있는 큐브 전개도">
+        <div class="face d">
+          <span class="tab n">풀</span>
+          <span class="tab w">풀</span>
+          <span class="tab e">풀</span>
+          <img src="/markers/letterD.png" alt="D" />
+        </div>
+        <div class="face f">
+          <span class="tab w">풀</span>
+          <span class="tab s">풀</span>
+          <img src="/markers/letterF.png" alt="F" />
+        </div>
+        <div class="face a">
+          <img src="/markers/letterA.png" alt="A" />
+        </div>
+        <div class="face kanji">
+          <span class="tab e">풀</span>
+          <span class="tab s">풀</span>
+          <img src="/markers/kanji.png" alt="人" />
+        </div>
+        <div class="face b">
+          <img src="/markers/letterB.png" alt="B" />
+        </div>
+        <div class="face c">
+          <img src="/markers/letterC.png" alt="C" />
+        </div>
+      </div>
+
+      <p class="net-key">실선 바깥 = 자르기 · 날개와 면 사이 점선 = 접기 · ‘풀’ 날개 = 안쪽에 풀을 발라 붙이기</p>
+
+      <ol class="steps no-print">
+        <li>실제 크기로 인쇄하세요. 페이지 맞춤 축소는 인식률을 떨어뜨립니다.</li>
+        <li>바깥 실선을 따라 자르고, 풀 날개는 사다리꼴 모양 그대로 남깁니다.</li>
+        <li>면과 면, 면과 날개 사이의 점선을 산 접기로 접습니다.</li>
+        <li>날개 안쪽에 풀을 바르고 마커가 바깥을 향하게 정육면체로 붙입니다.</li>
+        <li>두꺼운 종이에 붙이면 손에 쥐고 돌리기 좋습니다.</li>
+      </ol>
+    </main>
+    <dialog id="qr-dialog" class="qr-dialog no-print">
+      <h2>태블릿에서 열기</h2>
+      <p id="qr-note">같은 Wi‑Fi에서 이 코드를 스캔하세요.</p>
+      <img id="qr-image" alt="QR 코드" width="240" height="240" />
+      <a id="qr-url" class="qr-link" href="#"></a>
+      <label>주소
+        <select id="qr-origin"></select>
+      </label>
+      <label>페이지
+        <select id="qr-page"></select>
+      </label>
+      <div class="row">
+        <button id="qr-copy" class="btn" type="button">주소 복사</button>
+        <button id="qr-close" class="btn primary" type="button">닫기</button>
+      </div>
+    </dialog>
+    <script type="module">
+      import { bindQrDialog } from "/src/share-qr.js";
+      bindQrDialog();
+    </script>
+  </body>
+</html>

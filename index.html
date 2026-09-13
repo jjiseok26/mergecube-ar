@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>큐브 AR 스튜디오</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>큐브 AR 스튜디오</h1>
+            <p>면마다 다른 모델을 올리고, 각각 크기와 각도를 맞춥니다.</p>
+          </div>
+        </div>
+        <nav class="top-actions">
+          <button class="btn ghost" id="qr-open" type="button">태블릿 QR</button>
+          <a class="btn ghost" href="/print.html">큐브 인쇄</a>
+          <a class="btn primary" href="/ar.html">AR 보기</a>
+        </nav>
+      </header>
+
+      <main class="workspace">
+        <section class="viewport" id="dropzone">
+          <canvas id="view"></canvas>
+          <div class="viewport-hint">큐브 면을 클릭해 선택 · 폴더나 파일을 여기에 놓기</div>
+        </section>
+
+        <aside class="panel">
+          <fieldset>
+            <legend>큐브 면</legend>
+            <div class="face-grid" id="face-grid"></div>
+            <p class="face-hint" id="face-hint"></p>
+          </fieldset>
+
+          <div class="upload-stack">
+            <label class="upload">
+              <input id="file" type="file" multiple accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2" />
+              <strong id="file-label">이 면에 모델 올리기</strong>
+              <span>GLB 하나, 또는 glTF + .bin + textures PNG를 함께 선택하세요.</span>
+            </label>
+            <label class="upload slim">
+              <input id="folder" type="file" webkitdirectory multiple />
+              <strong>폴더 통째로 올리기</strong>
+            </label>
+          </div>
+
+          <p class="status" id="status">면을 고른 뒤 모델을 올리세요.</p>
+
+          <fieldset>
+            <legend>크기 · 위치</legend>
+            <label>크기 <output id="scale-out">1.00</output>
+              <input id="scale" type="range" min="0.05" max="3" step="0.01" value="1" />
+            </label>
+            <label>X <input id="px" type="range" min="-1" max="1" step="0.01" value="0" /></label>
+            <label>Y <input id="py" type="range" min="-1" max="1" step="0.01" value="0" /></label>
+            <label>Z <input id="pz" type="range" min="-1" max="1" step="0.01" value="0" /></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>회전</legend>
+            <label>X <input id="rx" type="range" min="-180" max="180" step="1" value="0" /></label>
+            <label>Y <input id="ry" type="range" min="-180" max="180" step="1" value="0" /></label>
+            <label>Z <input id="rz" type="range" min="-180" max="180" step="1" value="0" /></label>
+          </fieldset>
+
+          <div class="row">
+            <button id="fit" type="button" class="btn">면에 맞추기</button>
+            <button id="reset" type="button" class="btn ghost">변환 초기화</button>
+          </div>
+          <div class="row">
+            <button id="clear-face" type="button" class="btn ghost">이 면 비우기</button>
+            <button id="clear-all" type="button" class="btn ghost">모든 면 비우기</button>
+          </div>
+          <label class="check">
+            <input id="show-cube" type="checkbox" checked />
+            큐브 가이드 보이기
+          </label>
+
+          <ol class="steps">
+            <li>전개도를 인쇄해 마커가 바깥을 보게 접습니다.</li>
+            <li>면을 고르고 모델을 올린 뒤 크기와 각도를 맞춥니다.</li>
+            <li>태블릿 QR을 스캔해 같은 Wi‑Fi의 기기에서 AR을 엽니다.</li>
+          </ol>
+        </aside>
+      </main>
+    </div>
+    <dialog id="qr-dialog" class="qr-dialog">
+      <h2>태블릿에서 열기</h2>
+      <p id="qr-note">같은 Wi‑Fi에서 Safari 또는 Chrome으로 스캔하세요. 보안 경고가 나오면 계속 방문을 누르세요.</p>
+      <img id="qr-image" alt="QR 코드" width="240" height="240" />
+      <a id="qr-url" class="qr-link" href="#"></a>
+      <label>주소
+        <select id="qr-origin"></select>
+      </label>
+      <label>페이지
+        <select id="qr-page"></select>
+      </label>
+      <div class="row">
+        <button id="qr-copy" class="btn" type="button">주소 복사</button>
+        <button id="qr-close" class="btn primary" type="button">닫기</button>
+      </div>
+    </dialog>
+    <script type="module" src="/src/studio.js"></script>
+  </body>
+</html>

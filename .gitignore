@@ -1,0 +1,6 @@
+node_modules
+dist
+.vercel
+.env*.local
+public/project/*.glb
+public/project/meta.json
