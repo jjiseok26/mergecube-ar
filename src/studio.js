@@ -65,6 +65,7 @@ const cubeMaterials = FACE_TEXTURES.map((url) => {
     map,
     transparent: true,
     opacity: 0.55,
+    depthWrite: false,
     side: THREE.DoubleSide,
   });
 });
@@ -234,17 +235,28 @@ function selectFace(id) {
   setStatus(slot.blob ? `${face.label} 모델을 조작 중입니다.` : "이 면에 모델을 올리세요.");
 }
 
+function visibleMaterial(material, mesh) {
+  if (!material) return material;
+  const color = material.color?.clone?.() || new THREE.Color(0xffffff);
+  const emissive = material.emissive;
+  if (emissive && color.r + color.g + color.b < 0.04 && emissive.r + emissive.g + emissive.b > 0.04) color.copy(emissive);
+  return new THREE.MeshBasicMaterial({
+    color,
+    map: material.map || material.emissiveMap || null,
+    transparent: Boolean(material.transparent),
+    opacity: material.opacity ?? 1,
+    alphaTest: material.alphaTest || 0,
+    side: THREE.DoubleSide,
+    vertexColors: Boolean(mesh.geometry?.getAttribute?.("color")),
+  });
+}
+
 function keepMaterialColor(object) {
   object.traverse((child) => {
     if (!child.isMesh) return;
-    const materials = Array.isArray(child.material) ? child.material : [child.material];
-    for (const material of materials) {
-      if (!material) continue;
-      material.side = THREE.DoubleSide;
-      if (child.geometry?.getAttribute?.("color")) material.vertexColors = true;
-      if (material.metalness != null && !material.metalnessMap) material.metalness = 0;
-      material.needsUpdate = true;
-    }
+    const sources = Array.isArray(child.material) ? child.material : [child.material];
+    const next = sources.map((material) => visibleMaterial(material, child));
+    child.material = Array.isArray(child.material) ? next : next[0];
   });
 }
 
