@@ -234,10 +234,24 @@ function selectFace(id) {
   setStatus(slot.blob ? `${face.label} 모델을 조작 중입니다.` : "이 면에 모델을 올리세요.");
 }
 
+function keepMaterialColor(object) {
+  object.traverse((child) => {
+    if (!child.isMesh) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      if (!material) continue;
+      material.side = THREE.DoubleSide;
+      if (child.geometry?.getAttribute?.("color")) material.vertexColors = true;
+      if (material.metalness != null && !material.metalnessMap) material.metalness = 0;
+      material.needsUpdate = true;
+    }
+  });
+}
+
 function makeSlot(face) {
   const faceRoot = new THREE.Group();
   faceRoot.position.set(face.normal[0] * 0.5, face.normal[1] * 0.5, face.normal[2] * 0.5);
-  faceRoot.rotation.set(...face.rot);
+  faceRoot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...face.normal));
   const userGroup = new THREE.Group();
   const fitGroup = new THREE.Group();
   userGroup.add(fitGroup);
@@ -265,6 +279,7 @@ async function useFiles(fileList) {
   try {
     const { gltf, blob, name } = await loadModelFromFiles(files);
     clearSlotModel(slot);
+    keepMaterialColor(gltf.scene);
     slot.fitGroup.add(gltf.scene);
     slot.mixer = gltf.animations?.length ? new THREE.AnimationMixer(gltf.scene) : null;
     gltf.animations?.forEach((clip) => slot.mixer?.clipAction(clip).play());
@@ -285,6 +300,7 @@ async function loadSlotFromBlob(slot, blob, meta) {
   try {
     const gltf = await new Promise((resolve, reject) => loader.load(url, resolve, undefined, reject));
     clearSlotModel(slot);
+    keepMaterialColor(gltf.scene);
     slot.fitGroup.add(gltf.scene);
     slot.mixer = gltf.animations?.length ? new THREE.AnimationMixer(gltf.scene) : null;
     gltf.animations?.forEach((clip) => slot.mixer?.clipAction(clip).play());

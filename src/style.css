@@ -324,6 +324,7 @@ input[type="range"] {
 .ar-page {
   overflow: hidden;
   background: #000;
+  touch-action: none;
 }
 
 .ar-page video {
@@ -333,7 +334,7 @@ input[type="range"] {
 
 .ar-page canvas {
   z-index: 1;
-  pointer-events: none;
+  touch-action: none;
 }
 
 #ar-ui {

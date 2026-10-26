@@ -23,6 +23,8 @@
   let mixers = [];
   let clock;
   let running = false;
+  let viewHandle;
+  const view = { scale: 1, rotX: 0, rotY: 0, rotZ: 0 };
 
   function setStatus(text) {
     statusEl.textContent = text;
@@ -221,15 +223,30 @@
     return new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), new THREE.MeshNormalMaterial());
   }
 
+  function keepMaterialColor(object) {
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (!material) continue;
+        material.side = THREE.DoubleSide;
+        if (child.geometry?.getAttribute?.("color")) material.vertexColors = true;
+        if (material.metalness != null && !material.metalnessMap) material.metalness = 0;
+        material.needsUpdate = true;
+      }
+    });
+  }
+
   function addFaceContent(face, transform, object, animations) {
     const faceRoot = new THREE.Group();
     faceRoot.position.set(face.normal[0] * 0.5, face.normal[1] * 0.5, face.normal[2] * 0.5);
-    faceRoot.rotation.set(face.rot[0], face.rot[1], face.rot[2]);
+    faceRoot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...face.normal));
     const userGroup = new THREE.Group();
     const fitGroup = new THREE.Group();
     userGroup.add(fitGroup);
     faceRoot.add(userGroup);
-    contentRoot.add(faceRoot);
+    keepMaterialColor(object);
+    viewHandle.add(faceRoot);
     applyTransform(userGroup, transform);
     fitGroup.add(object);
     fitModel(fitGroup, object);
@@ -243,6 +260,9 @@
   async function buildContent() {
     contentRoot = new THREE.Group();
     contentRoot.scale.setScalar(CUBE_SIZE);
+    viewHandle = new THREE.Group();
+    contentRoot.add(viewHandle);
+    applyViewHandle();
     mixers = [];
 
     const meta = await loadProject();
@@ -264,12 +284,12 @@
 
     if (!loaded) {
       addFaceContent(FACES[0], { position: [0, 0, 0], rotation: [0, 0, 0], scale: 1 }, makeDemoModel(), []);
-      setStatus("올린 모델이 없어 기본 도형을 표시합니다. 큐브를 비춰 보세요.");
+      setStatus("올린 모델이 없어 기본 도형을 표시합니다. 한 손가락으로 회전, 두 손가락으로 확대하세요.");
     } else {
-      setStatus(`추적 중: ${loaded}개 면`);
+      setStatus(`추적 중: ${loaded}개 면 · 한 손가락 회전, 두 손가락 확대`);
     }
 
-    contentRoot.add(
+    viewHandle.add(
       new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
         new THREE.LineBasicMaterial({ color: 0xc8f14a }),
@@ -301,7 +321,88 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.domElement.style.position = "absolute";
     renderer.domElement.style.inset = "0";
+    renderer.domElement.style.touchAction = "none";
     document.body.appendChild(renderer.domElement);
+    bindViewGestures(renderer.domElement);
+  }
+
+  function applyViewHandle() {
+    if (!viewHandle) return;
+    viewHandle.scale.setScalar(view.scale);
+    viewHandle.rotation.set(view.rotX, view.rotY, view.rotZ);
+  }
+
+  function bindViewGestures(el) {
+    const pointers = new Map();
+    let pinchStartDist = 1;
+    let pinchStartScale = 1;
+    let twistStart = 0;
+    let twistStartRotZ = 0;
+    let lastX = 0;
+    let lastY = 0;
+
+    function pointList() {
+      return [...pointers.values()];
+    }
+
+    function span(a, b) {
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function yaw(a, b) {
+      return Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+    }
+
+    el.addEventListener("pointerdown", (event) => {
+      el.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, event);
+      lastX = event.clientX;
+      lastY = event.clientY;
+      if (pointers.size === 2) {
+        const [a, b] = pointList();
+        pinchStartDist = span(a, b) || 1;
+        pinchStartScale = view.scale;
+        twistStart = yaw(a, b);
+        twistStartRotZ = view.rotZ;
+      }
+    });
+
+    el.addEventListener("pointermove", (event) => {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, event);
+      if (pointers.size >= 2) {
+        const [a, b] = pointList();
+        view.scale = Math.min(4, Math.max(0.25, pinchStartScale * (span(a, b) / pinchStartDist)));
+        view.rotZ = twistStartRotZ + (yaw(a, b) - twistStart);
+      } else {
+        view.rotY += (event.clientX - lastX) * 0.01;
+        view.rotX += (event.clientY - lastY) * 0.01;
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
+      applyViewHandle();
+    });
+
+    function clearPointer(event) {
+      pointers.delete(event.pointerId);
+      if (pointers.size === 1) {
+        const leftover = pointList()[0];
+        lastX = leftover.clientX;
+        lastY = leftover.clientY;
+      }
+    }
+
+    el.addEventListener("pointerup", clearPointer);
+    el.addEventListener("pointercancel", clearPointer);
+    el.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        view.scale = Math.min(4, Math.max(0.25, view.scale * (event.deltaY > 0 ? 0.92 : 1.08)));
+        applyViewHandle();
+      },
+      { passive: false },
+    );
   }
 
   function initMarkers() {
