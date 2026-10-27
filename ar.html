@@ -20,6 +20,28 @@
       <p id="ar-status">카메라를 허용한 뒤 인쇄한 큐브를 비춰 주세요.</p>
       <button id="ar-start" type="button" class="btn primary" data-i18n="ar.start">카메라 시작</button>
     </div>
+    <div id="ar-controls">
+      <div class="ar-control-row">
+        <span data-i18n="ar.angle">각도</span>
+        <button type="button" data-view="rotY" data-step="-0.4" data-i18n="ar.turnLeft">좌회전</button>
+        <button type="button" data-view="rotY" data-step="0.4" data-i18n="ar.turnRight">우회전</button>
+        <button type="button" data-view="rotX" data-step="-0.3" data-i18n="ar.tiltUp">숙이기</button>
+        <button type="button" data-view="rotX" data-step="0.3" data-i18n="ar.tiltDown">젖히기</button>
+      </div>
+      <div class="ar-control-row">
+        <span data-i18n="ar.move">위치</span>
+        <button type="button" data-view="x" data-step="-0.08" data-i18n="ar.moveLeft">왼쪽</button>
+        <button type="button" data-view="x" data-step="0.08" data-i18n="ar.moveRight">오른쪽</button>
+        <button type="button" data-view="y" data-step="0.08" data-i18n="ar.moveUp">위로</button>
+        <button type="button" data-view="y" data-step="-0.08" data-i18n="ar.moveDown">아래로</button>
+      </div>
+      <div class="ar-control-row">
+        <span data-i18n="ar.size">크기</span>
+        <button type="button" data-view="scale" data-step="1.12" data-i18n="ar.bigger">확대</button>
+        <button type="button" data-view="scale" data-step="0.89" data-i18n="ar.smaller">축소</button>
+        <button id="ar-reset" type="button" data-i18n="ar.reset">처음</button>
+      </div>
+    </div>
     <script src="/js/i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.133.1/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.133.1/examples/js/loaders/GLTFLoader.js"></script>

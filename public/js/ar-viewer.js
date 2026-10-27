@@ -23,8 +23,10 @@
   let mixers = [];
   let clock;
   let running = false;
+  let ticking = false;
+  let resizeBound = false;
   let viewHandle;
-  const view = { scale: 1, rotX: 0, rotY: 0, rotZ: 0 };
+  const view = { scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 };
 
   let statusState = { key: "ar.ready", vars: null };
 
@@ -254,6 +256,7 @@
   }
 
   async function buildContent() {
+    if (contentRoot?.parent) contentRoot.parent.remove(contentRoot);
     contentRoot = new THREE.Group();
     contentRoot.scale.setScalar(CUBE_SIZE);
     viewHandle = new THREE.Group();
@@ -263,24 +266,33 @@
 
     const meta = await loadProject();
     let loaded = 0;
+    let failed = 0;
 
     for (const face of FACES) {
       const faceMeta = meta?.faces?.[face.id];
       if (!faceMeta?.hasModel) continue;
       const blob = await blobForFace(face.id, faceMeta);
-      if (!blob) continue;
+      if (!blob) {
+        failed += 1;
+        continue;
+      }
       try {
         const gltf = await loadGltfFromBlob(blob);
         addFaceContent(face, faceMeta.transform, gltf.scene, gltf.animations);
         loaded += 1;
       } catch (error) {
+        failed += 1;
         console.error(error);
       }
     }
 
-    if (!loaded) {
+    if (!loaded && !failed) {
       addFaceContent(FACES[0], { position: [0, 0, 0], rotation: [0, 0, 0], scale: 1 }, makeDemoModel(), []);
       setStatus("ar.demo");
+    } else if (!loaded) {
+      setStatus("ar.loadFail", { failed });
+    } else if (failed) {
+      setStatus("ar.partial", { count: loaded, failed });
     } else {
       setStatus("ar.tracking", { count: loaded });
     }
@@ -299,6 +311,19 @@
     arToolkitSource.copyElementSizeTo(renderer.domElement);
     if (arToolkitContext && arToolkitContext.arController !== null) {
       arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
+    }
+    liftRenderer();
+  }
+
+  function liftRenderer() {
+    if (!renderer) return;
+    renderer.domElement.style.zIndex = "2";
+    const video = arToolkitSource?.domElement;
+    if (video) video.style.pointerEvents = "none";
+    const detect = arToolkitContext?.arController?.canvas;
+    if (detect && detect !== renderer.domElement) {
+      detect.style.pointerEvents = "none";
+      detect.style.zIndex = "0";
     }
   }
 
@@ -321,6 +346,7 @@
     renderer.domElement.style.position = "absolute";
     renderer.domElement.style.inset = "0";
     renderer.domElement.style.touchAction = "none";
+    renderer.domElement.style.zIndex = "2";
     document.body.appendChild(renderer.domElement);
     if (THREE.RoomEnvironment && THREE.PMREMGenerator) {
       const pmrem = new THREE.PMREMGenerator(renderer);
@@ -332,8 +358,62 @@
 
   function applyViewHandle() {
     if (!viewHandle) return;
+    viewHandle.position.set(view.x, view.y, 0);
     viewHandle.scale.setScalar(view.scale);
     viewHandle.rotation.set(view.rotX, view.rotY, view.rotZ);
+  }
+
+  function stepView(state, key, amount) {
+    const next = { scale: state.scale, rotX: state.rotX, rotY: state.rotY, rotZ: state.rotZ, x: state.x, y: state.y };
+    if (key === "scale") next.scale = Math.min(4, Math.max(0.25, state.scale * amount));
+    else if (key === "x" || key === "y") next[key] = Math.min(1.2, Math.max(-1.2, state[key] + amount));
+    else if (key === "rotX" || key === "rotY" || key === "rotZ") next[key] = state[key] + amount;
+    return next;
+  }
+
+  function nudge(key, amount) {
+    Object.assign(view, stepView(view, key, amount));
+    applyViewHandle();
+  }
+
+  function resetView() {
+    view.scale = 1;
+    view.rotX = 0;
+    view.rotY = 0;
+    view.rotZ = 0;
+    view.x = 0;
+    view.y = 0;
+    applyViewHandle();
+  }
+
+  function bindHold(button, fn) {
+    let timer = 0;
+    const stop = () => {
+      window.clearInterval(timer);
+      timer = 0;
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      try {
+        button.setPointerCapture(event.pointerId);
+      } catch (_) {
+        /* some browsers reject capture on a disappearing button */
+      }
+      fn();
+      stop();
+      window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
+      timer = window.setInterval(fn, 120);
+    });
+  }
+
+  function bindViewControls() {
+    document.querySelectorAll("#ar-controls [data-view]").forEach((button) => {
+      bindHold(button, () => nudge(button.dataset.view, Number(button.dataset.step)));
+    });
+    document.querySelector("#ar-reset").addEventListener("click", resetView);
   }
 
   function bindViewGestures(el) {
@@ -410,6 +490,7 @@
   }
 
   function initMarkers() {
+    markerRoots.forEach((root) => scene.remove(root));
     markerRoots = [];
     markerGroups = [];
 
@@ -433,6 +514,13 @@
 
   function initAR(stream) {
     return new Promise((resolve, reject) => {
+      if (arToolkitSource?.domElement) {
+        const oldVideo = arToolkitSource.domElement;
+        oldVideo.srcObject?.getTracks?.().forEach((track) => track.stop());
+        oldVideo.remove();
+        arToolkitSource = null;
+        arToolkitContext = null;
+      }
       const media = navigator.mediaDevices;
       const originalGetUserMedia = media.getUserMedia.bind(media);
       media.getUserMedia = () => Promise.resolve(stream);
@@ -480,7 +568,10 @@
       }, fail);
 
       if (!source) fail({ name: "NotSupportedError", message: "WebRTC issue" });
-      window.addEventListener("resize", onResize);
+      if (!resizeBound) {
+        resizeBound = true;
+        window.addEventListener("resize", onResize);
+      }
     });
   }
 
@@ -490,7 +581,7 @@
     const delta = clock.getDelta();
     mixers.forEach((mixer) => mixer.update(delta));
 
-    if (arToolkitSource && arToolkitSource.ready && arToolkitContext) {
+    if (contentRoot && arToolkitSource && arToolkitSource.ready && arToolkitContext) {
       arToolkitContext.update(arToolkitSource.domElement);
       for (let i = 0; i < markerRoots.length; i += 1) {
         if (markerRoots[i].visible) {
@@ -512,7 +603,10 @@
       const stream = await openCamera();
       if (!renderer) initScene();
       await initAR(stream);
-      tick();
+      if (!ticking) {
+        ticking = true;
+        tick();
+      }
       await buildContent();
     } catch (error) {
       running = false;
@@ -534,4 +628,12 @@
   window.addEventListener("langchange", () => {
     if (statusState) statusEl.textContent = window.I18N.t(statusState.key, statusState.vars);
   });
+  bindViewControls();
+
+  const stepCheck = stepView({ scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 }, "scale", 10);
+  const shiftCheck = stepView({ scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 }, "x", -5);
+  const turnCheck = stepView({ scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 }, "rotY", -0.4);
+  if (stepCheck.scale !== 4 || shiftCheck.x !== -1.2 || turnCheck.rotY !== -0.4) {
+    console.error("stepView check failed", stepCheck, shiftCheck, turnCheck);
+  }
 })();

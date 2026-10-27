@@ -344,11 +344,52 @@ input[type="range"] {
 .ar-page video {
   z-index: 0 !important;
   object-fit: cover;
+  pointer-events: none !important;
 }
 
 .ar-page canvas {
   z-index: 1;
   touch-action: none;
+}
+
+#ar-controls {
+  position: fixed;
+  z-index: 20;
+  left: 8px;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 640px;
+  touch-action: manipulation;
+}
+
+.ar-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ar-control-row span,
+#ar-controls button {
+  border: 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.ar-control-row span {
+  padding: 8px 10px;
+}
+
+#ar-controls button {
+  flex: 1 1 72px;
+  min-height: 44px;
+  cursor: pointer;
 }
 
 #ar-ui {
