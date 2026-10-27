@@ -6,13 +6,21 @@
     <title>큐브 AR</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
-  <body class="ar-page">
+  <body class="ar-page" data-i18n-title="doc.ar">
     <div id="ar-ui">
-      <a class="btn ghost back" href="/help.html">이용 안내</a>
-      <a class="btn ghost back" href="/">스튜디오</a>
+      <label class="lang">
+        <select data-lang-select data-i18n-aria="lang" aria-label="언어">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+          <option value="sw">Kiswahili</option>
+        </select>
+      </label>
+      <a class="btn ghost back" href="/help.html" data-i18n="nav.help">이용 안내</a>
+      <a class="btn ghost back" href="/" data-i18n="nav.studio">스튜디오</a>
       <p id="ar-status">카메라를 허용한 뒤 인쇄한 큐브를 비춰 주세요.</p>
-      <button id="ar-start" type="button" class="btn primary">카메라 시작</button>
+      <button id="ar-start" type="button" class="btn primary" data-i18n="ar.start">카메라 시작</button>
     </div>
+    <script src="/js/i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.133.1/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.133.1/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.133.1/examples/js/environments/RoomEnvironment.js"></script>

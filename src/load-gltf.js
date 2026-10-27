@@ -120,7 +120,7 @@ export async function exportGlb(gltf) {
 
 export async function loadModelFromFiles(fileList) {
   const files = [...fileList];
-  if (!files.length) throw new Error("파일이 없습니다.");
+  if (!files.length) throw Object.assign(new Error("gltf.empty"), { i18n: "gltf.empty" });
 
   const glb = files.find((file) => /\.glb$/i.test(file.name));
   const gltfFile = pickGltfFile(files);
@@ -149,9 +149,9 @@ export async function loadModelFromFiles(fileList) {
       return { gltf, blob, name: gltfFile.name };
     } catch (error) {
       if (error?.message === "missing-bin") {
-        throw new Error("glTF는 .bin과 textures 폴더의 PNG를 함께 선택하거나, 폴더 전체를 올려 주세요.");
+        throw Object.assign(new Error("gltf.missingBin"), { i18n: "gltf.missingBin" });
       }
-      throw new Error("glTF 리소스를 읽지 못했습니다. .bin과 텍스처 파일을 함께 올려 주세요.");
+      throw Object.assign(new Error("gltf.resources"), { i18n: "gltf.resources" });
     } finally {
       revokeAll(cache);
     }
@@ -168,5 +168,5 @@ export async function loadModelFromFiles(fileList) {
     }
   }
 
-  throw new Error("GLB 또는 GLTF 파일이 필요합니다.");
+  throw Object.assign(new Error("gltf.need"), { i18n: "gltf.need" });
 }

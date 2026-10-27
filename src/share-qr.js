@@ -1,8 +1,8 @@
 const PAGES = [
-  { path: "/ar.html", label: "AR 보기" },
-  { path: "/", label: "스튜디오" },
-  { path: "/print.html", label: "큐브 인쇄" },
-  { path: "/help.html", label: "이용 안내" },
+  { path: "/ar.html", label: "nav.ar" },
+  { path: "/", label: "nav.studio" },
+  { path: "/print.html", label: "nav.print" },
+  { path: "/help.html", label: "nav.help" },
 ];
 
 function isLoopback(hostname) {
@@ -48,26 +48,27 @@ export function bindQrDialog() {
     return origin.replace(/\/$/, "") + pageSelect.value;
   }
 
+  function fillPages() {
+    const selected = pageSelect.value;
+    pageSelect.innerHTML = PAGES.map((page) => `<option value="${page.path}">${window.I18N.t(page.label)}</option>`).join("");
+    if (selected) pageSelect.value = selected;
+  }
+
   function render() {
     const url = currentUrl();
     img.src = qrSrc(url);
-    img.alt = `${url} QR 코드`;
+    img.alt = window.I18N.t("qr.alt", { url });
     link.textContent = url;
     link.href = url;
     const loopback = isLoopback(new URL(url).hostname);
     const https = url.startsWith("https:");
-    if (loopback) {
-      note.textContent = "localhost 주소는 태블릿에서 열리지 않습니다. 아래 네트워크 주소를 선택하세요.";
-    } else if (!https) {
-      note.textContent = "HTTP 주소는 태블릿 카메라가 막힙니다. HTTPS 주소의 QR을 사용하세요.";
-    } else {
-      note.textContent =
-        "같은 Wi‑Fi에서 Safari 또는 Chrome으로 여세요. 보안 경고가 나오면 '고급 → 계속' 또는 '방문'을 누르세요. 카메라 앱 미리보기 창이 아니라 브라우저에서 열어야 합니다.";
-    }
+    if (loopback) note.textContent = window.I18N.t("qr.loopback");
+    else if (!https) note.textContent = window.I18N.t("qr.http");
+    else note.textContent = window.I18N.t("qr.https");
   }
 
   openBtn.addEventListener("click", async () => {
-    pageSelect.innerHTML = PAGES.map((page) => `<option value="${page.path}">${page.label}</option>`).join("");
+    fillPages();
     const origins = await lanOrigins();
     originSelect.innerHTML = origins.map((origin) => `<option value="${origin}">${origin.replace(/^https?:\/\//, "")}</option>`).join("");
     const preferred = origins.find((origin) => !isLoopback(new URL(origin).hostname)) || origins[0];
@@ -83,13 +84,18 @@ export function bindQrDialog() {
     const url = currentUrl();
     try {
       await navigator.clipboard.writeText(url);
-      copyBtn.textContent = "복사됨";
+      copyBtn.textContent = window.I18N.t("qr.copied");
       setTimeout(() => {
-        copyBtn.textContent = "주소 복사";
+        copyBtn.textContent = window.I18N.t("qr.copy");
       }, 1200);
     } catch {
-      window.prompt("주소를 복사하세요", url);
+      window.prompt(window.I18N.t("qr.prompt"), url);
     }
   });
   dialog.querySelector("#qr-close").addEventListener("click", () => dialog.close());
+  window.addEventListener("langchange", () => {
+    if (!dialog.open) return;
+    fillPages();
+    render();
+  });
 }

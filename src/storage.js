@@ -83,7 +83,7 @@ export async function publishMeta(meta) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(meta),
   });
-  if (!res.ok) throw new Error("설정을 저장하지 못했습니다.");
+  if (!res.ok) throw Object.assign(new Error("save.meta"), { i18n: "save.meta" });
 }
 
 export async function publishFace(faceId, blob) {
@@ -93,12 +93,12 @@ export async function publishFace(faceId, blob) {
       return;
     }
     const res = await fetch(`/api/model?face=${encodeURIComponent(faceId)}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("모델을 저장하지 못했습니다.");
+    if (!res.ok) throw Object.assign(new Error("save.model"), { i18n: "save.model" });
     return;
   }
   if (blob) {
     const res = await fetch(`/api/model?face=${encodeURIComponent(faceId)}`, { method: "PUT", body: blob });
-    if (!res.ok) throw new Error("모델을 저장하지 못했습니다.");
+    if (!res.ok) throw Object.assign(new Error("save.model"), { i18n: "save.model" });
     return;
   }
   await fetch(`/api/model?face=${encodeURIComponent(faceId)}`, { method: "DELETE" });

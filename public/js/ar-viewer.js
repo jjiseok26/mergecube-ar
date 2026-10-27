@@ -26,38 +26,35 @@
   let viewHandle;
   const view = { scale: 1, rotX: 0, rotY: 0, rotZ: 0 };
 
-  function setStatus(text) {
-    statusEl.textContent = text;
+  let statusState = { key: "ar.ready", vars: null };
+
+  function setStatus(key, vars) {
+    if (Array.isArray(key)) {
+      vars = key[1];
+      key = key[0];
+    }
+    statusState = { key, vars: vars || null };
+    statusEl.textContent = window.I18N.t(key, vars);
   }
 
   function cameraErrorMessage(error) {
     const name = error?.name || "";
     const message = error?.message || "";
-    if (!window.isSecureContext) {
-      return "태블릿 카메라는 HTTPS가 필요합니다. PC에서 서버를 재시작한 뒤 태블릿 QR을 다시 만들어 주세요.";
-    }
-    if (/KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent || "")) {
-      return "앱 속 브라우저에서는 카메라가 막힙니다. 오른쪽 아래 Safari 또는 Chrome으로 열기를 누르세요.";
-    }
-    if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-      return "카메라 권한이 거부되었습니다. 주소창 옆 사이트 설정에서 카메라를 허용하세요.";
-    }
-    if (name === "NotFoundError" || name === "OverconstrainedError") {
-      return "이 기기에서 쓸 수 있는 카메라를 찾지 못했습니다.";
-    }
-    if (message.includes("WebRTC") || !navigator.mediaDevices?.getUserMedia) {
-      return "이 브라우저에서는 카메라를 쓸 수 없습니다. Safari 또는 Chrome으로 열어 주세요.";
-    }
-    return message ? `카메라를 시작할 수 없습니다: ${message}` : "카메라를 시작할 수 없습니다.";
+    if (!window.isSecureContext || name === "SecurityError") return "ar.https";
+    if (/KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent || "")) return "ar.inapp";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") return "ar.denied";
+    if (name === "NotFoundError" || name === "OverconstrainedError") return "ar.missing";
+    if (message.includes("WebRTC") || name === "NotSupportedError" || !navigator.mediaDevices?.getUserMedia) return "ar.unsupported";
+    return message ? ["ar.failDetail", { message }] : "ar.fail";
   }
 
   async function openCamera() {
     if (!window.isSecureContext) {
-      throw new Error(cameraErrorMessage({ name: "SecurityError" }));
+      throw Object.assign(new Error("ar.https"), { i18n: "ar.https" });
     }
     const media = navigator.mediaDevices;
     if (!media?.getUserMedia) {
-      throw new Error(cameraErrorMessage({ name: "NotSupportedError" }));
+      throw Object.assign(new Error("ar.unsupported"), { i18n: "ar.unsupported" });
     }
     if (!media.enumerateDevices) media.enumerateDevices = async () => [];
     const tries = [
@@ -78,7 +75,7 @@
   function waitForVideo(video) {
     if (video.videoWidth) return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("카메라 영상이 시작되지 않았습니다.")), 12000);
+      const timer = setTimeout(() => reject(Object.assign(new Error("ar.noVideo"), { i18n: "ar.noVideo" })), 12000);
       video.addEventListener(
         "loadedmetadata",
         () => {
@@ -98,9 +95,9 @@
     try {
       await video.play();
     } catch {
-      setStatus("화면을 한 번 탭하면 카메라가 켜집니다.");
+      setStatus("ar.tap");
       await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error("카메라를 재생할 수 없습니다. 화면을 탭해 주세요.")), 20000);
+        const timer = setTimeout(() => reject(Object.assign(new Error("ar.noPlay"), { i18n: "ar.noPlay" })), 20000);
         const resume = () => {
           video
             .play()
@@ -283,9 +280,9 @@
 
     if (!loaded) {
       addFaceContent(FACES[0], { position: [0, 0, 0], rotation: [0, 0, 0], scale: 1 }, makeDemoModel(), []);
-      setStatus("올린 모델이 없어 기본 도형을 표시합니다. 한 손가락으로 회전, 두 손가락으로 확대하세요.");
+      setStatus("ar.demo");
     } else {
-      setStatus(`추적 중: ${loaded}개 면 · 한 손가락 회전, 두 손가락 확대`);
+      setStatus("ar.tracking", { count: loaded });
     }
 
     viewHandle.add(
@@ -473,6 +470,7 @@
               camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
               initMarkers();
               onResize();
+              setStatus("ar.point");
               if (settled) return;
               settled = true;
               resolve();
@@ -509,7 +507,7 @@
     if (running) return;
     running = true;
     startBtn.hidden = true;
-    setStatus("카메라를 준비하는 중...");
+    setStatus("ar.preparing");
     try {
       const stream = await openCamera();
       if (!renderer) initScene();
@@ -526,13 +524,14 @@
     start().catch((error) => {
       console.error(error);
       startBtn.hidden = false;
-      setStatus(error?.message || cameraErrorMessage(error));
+      setStatus(error?.i18n || cameraErrorMessage(error));
     });
   });
 
-  if (!window.isSecureContext) {
-    setStatus("태블릿에서는 HTTPS 주소의 QR이 필요합니다. PC에서 태블릿 QR을 다시 만들어 주세요.");
-  } else if (/KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent || "")) {
-    setStatus("앱 속 브라우저입니다. Safari 또는 Chrome으로 열어 카메라를 켜세요.");
-  }
+  setStatus("ar.ready");
+  if (!window.isSecureContext) setStatus("ar.https");
+  else if (/KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent || "")) setStatus("ar.inapp");
+  window.addEventListener("langchange", () => {
+    if (statusState) statusEl.textContent = window.I18N.t(statusState.key, statusState.vars);
+  });
 })();

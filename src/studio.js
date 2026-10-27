@@ -136,6 +136,27 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
+function t(key, vars) {
+  return window.I18N.t(key, vars);
+}
+
+function faceTitle(face) {
+  const mark = face.id === "kanji" ? "人" : face.id.replace("letter", "");
+  return `${mark} · ${t("side." + face.side)}`;
+}
+
+let said = null;
+
+function say(key, vars, isError = false) {
+  said = { key, vars, isError };
+  setStatus(t(key, vars), isError);
+}
+
+function report(error, fallback) {
+  if (error?.i18n) say(error.i18n, null, true);
+  else setStatus(error?.message || t(fallback), true);
+}
+
 function selectedSlot() {
   return slots[selectedId];
 }
@@ -192,7 +213,7 @@ async function persistMetaOnly() {
   try {
     await publishMeta(meta);
   } catch {
-    setStatus("이 기기에만 저장했습니다. 서버에 올리지 못했습니다.");
+    say("status.localOnly");
   }
 }
 
@@ -201,7 +222,7 @@ async function persistFace(slot) {
   try {
     await publishFace(slot.id, slot.blob);
   } catch {
-    setStatus("이 기기에만 저장했습니다. 서버에 올리지 못했습니다.");
+    say("status.localOnly");
     return;
   }
   await persistMetaOnly();
@@ -213,7 +234,7 @@ function queueSave() {
   document.querySelector("#scale-out").textContent = slot.transform.scale.toFixed(2);
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
-    persistMetaOnly().catch((error) => setStatus(error.message, true));
+    persistMetaOnly().catch((error) => report(error, "status.localOnly"));
   }, 250);
 }
 
@@ -227,8 +248,12 @@ function highlightFace() {
   }
   const face = selectedFace();
   const slot = selectedSlot();
-  faceHint.textContent = slot.blob ? `${face.label} · ${slot.name}` : `${face.label} — 이 면에 모델을 올립니다.`;
-  fileLabel.textContent = slot.blob ? slot.name : "이 면에 모델 올리기";
+  faceHint.textContent = slot.blob ? `${faceTitle(face)} · ${slot.name}` : t("status.emptyFace", { face: faceTitle(face) });
+  fileLabel.textContent = slot.blob ? slot.name : t("upload.title");
+  for (const button of faceGrid.querySelectorAll("button")) {
+    const item = FACES.find((face) => face.id === button.dataset.id);
+    if (item) button.title = faceTitle(item);
+  }
 }
 
 function selectFace(id) {
@@ -239,7 +264,7 @@ function selectFace(id) {
   highlightFace();
   const face = selectedFace();
   const slot = slots[id];
-  setStatus(slot.blob ? `${face.label} 모델을 조작 중입니다.` : "이 면에 모델을 올리세요.");
+  say(slot.blob ? "status.editing" : "status.pick", slot.blob ? { face: faceTitle(face) } : null);
 }
 
 function keepMaterialColor(object) {
@@ -286,7 +311,7 @@ async function useFiles(fileList) {
   if (!files.length) return;
   const slot = selectedSlot();
   const face = selectedFace();
-  setStatus(`${face.label}에 불러오는 중...`);
+  say("status.loading", { face: faceTitle(face) });
   try {
     const { gltf, blob, name } = await loadModelFromFiles(files);
     clearSlotModel(slot);
@@ -298,10 +323,10 @@ async function useFiles(fileList) {
     slot.blob = blob;
     slot.name = name;
     highlightFace();
-    setStatus(`${face.label}에 ${name} 파일을 올렸습니다. 크기와 각도를 맞춘 뒤 다른 면도 채워 보세요.`);
+    say("status.loaded", { face: faceTitle(face), name });
     await persistFace(slot);
   } catch (error) {
-    setStatus(error.message || "모델을 읽지 못했습니다.", true);
+    report(error, "status.readFail");
     console.error(error);
   }
 }
@@ -391,7 +416,7 @@ async function restore() {
 
   selectFace(selectedId);
   const filled = FACES.filter((face) => slots[face.id].blob).length;
-  setStatus(filled ? `저장된 모델 ${filled}면을 불러왔습니다.` : "면을 고른 뒤 모델을 올리세요.");
+  say(filled ? "status.restored" : "status.pick", filled ? { count: filled } : null);
 }
 
 FACES.forEach(makeSlot);
@@ -401,8 +426,8 @@ for (const face of FACES) {
   button.type = "button";
   button.dataset.id = face.id;
   button.className = "face-btn";
-  button.textContent = face.label.split(" · ")[0];
-  button.title = face.label;
+  button.textContent = face.id === "kanji" ? "人" : face.id.replace("letter", "");
+  button.title = faceTitle(face);
   button.addEventListener("click", () => selectFace(face.id));
   faceGrid.append(button);
 }
@@ -448,13 +473,13 @@ Object.values(sliders).forEach((input) => input.addEventListener("input", queueS
 
 document.querySelector("#fit").addEventListener("click", () => {
   fitSlot(selectedSlot());
-  persistMetaOnly().catch((error) => setStatus(error.message, true));
+  persistMetaOnly().catch((error) => report(error, "status.localOnly"));
 });
 
 document.querySelector("#reset").addEventListener("click", () => {
   writeSliders(DEFAULT_TRANSFORM);
   applyTransform(selectedSlot(), DEFAULT_TRANSFORM);
-  persistMetaOnly().catch((error) => setStatus(error.message, true));
+  persistMetaOnly().catch((error) => report(error, "status.localOnly"));
 });
 
 document.querySelector("#clear-face").addEventListener("click", async () => {
@@ -462,25 +487,25 @@ document.querySelector("#clear-face").addEventListener("click", async () => {
   emptySlot(slot);
   writeSliders(DEFAULT_TRANSFORM);
   highlightFace();
-  setStatus(`${selectedFace().label}을 비웠습니다.`);
-  await persistFace(slot).catch((error) => setStatus(error.message, true));
+  say("status.cleared", { face: faceTitle(selectedFace()) });
+  await persistFace(slot).catch((error) => report(error, "status.localOnly"));
 });
 
 document.querySelector("#clear-all").addEventListener("click", async () => {
-  if (!window.confirm("모든 면의 모델을 삭제할까요?")) return;
+  if (!window.confirm(t("confirm.clearAll"))) return;
   for (const face of FACES) {
     emptySlot(slots[face.id]);
     await saveFaceBlob(face.id, null);
     try {
       await publishFace(face.id, null);
     } catch {
-      setStatus("이 기기에만 저장했습니다. 서버에 올리지 못했습니다.");
+      say("status.localOnly");
     }
   }
   writeSliders(DEFAULT_TRANSFORM);
   highlightFace();
-  setStatus("모든 면을 비웠습니다.");
-  await persistMetaOnly().catch((error) => setStatus(error.message, true));
+  say("status.clearedAll");
+  await persistMetaOnly().catch((error) => report(error, "status.localOnly"));
 });
 
 showCube.addEventListener("change", () => {
@@ -488,3 +513,7 @@ showCube.addEventListener("change", () => {
 });
 
 bindQrDialog();
+window.addEventListener("langchange", () => {
+  highlightFace();
+  if (said) setStatus(t(said.key, said.vars), said.isError);
+});
