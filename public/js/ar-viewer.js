@@ -25,6 +25,7 @@
   let running = false;
   let ticking = false;
   let resizeBound = false;
+  let anchoredIndex = -1;
   let viewHandle;
   const view = { scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 };
 
@@ -244,6 +245,7 @@
     userGroup.add(fitGroup);
     faceRoot.add(userGroup);
     keepMaterialColor(object);
+    faceRoot.userData.removable = true;
     viewHandle.add(faceRoot);
     applyTransform(userGroup, transform);
     fitGroup.add(object);
@@ -252,7 +254,45 @@
       const mixer = new THREE.AnimationMixer(object);
       animations.forEach((clip) => mixer.clipAction(clip).play());
       mixers.push(mixer);
+      faceRoot.userData.mixer = mixer;
     }
+  }
+
+  function removeFace(faceRoot) {
+    const mixer = faceRoot.userData.mixer;
+    if (mixer) {
+      const index = mixers.indexOf(mixer);
+      if (index >= 0) mixers.splice(index, 1);
+    }
+    faceRoot.parent.remove(faceRoot);
+    setStatus("ar.removed");
+  }
+
+  function removeTapped(event) {
+    if (!viewHandle || !renderer || !camera) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    const raycaster = new THREE.Raycaster();
+    scene.updateMatrixWorld(true);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(viewHandle, true);
+    for (const hit of hits) {
+      let node = hit.object;
+      while (node && node !== viewHandle) {
+        if (node.userData.removable) {
+          removeFace(node);
+          return;
+        }
+        node = node.parent;
+      }
+    }
+  }
+
+  function nextAnchor(found, anchored) {
+    return found >= 0 ? found : anchored;
   }
 
   async function buildContent() {
@@ -424,6 +464,7 @@
     let twistStartRotZ = 0;
     let lastX = 0;
     let lastY = 0;
+    let gesture = null;
 
     function pointList() {
       return [...pointers.values()];
@@ -442,6 +483,8 @@
       pointers.set(event.pointerId, event);
       lastX = event.clientX;
       lastY = event.clientY;
+      if (!gesture) gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+      if (pointers.size >= 2) gesture.moved = true;
       if (pointers.size === 2) {
         const [a, b] = pointList();
         pinchStartDist = span(a, b) || 1;
@@ -454,6 +497,12 @@
     el.addEventListener("pointermove", (event) => {
       if (!pointers.has(event.pointerId)) return;
       pointers.set(event.pointerId, event);
+      if (gesture && !gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 14) {
+        gesture.moved = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
+      if (pointers.size < 2 && gesture && !gesture.moved) return;
       if (pointers.size >= 2) {
         const [a, b] = pointList();
         view.scale = Math.min(4, Math.max(0.25, pinchStartScale * (span(a, b) / pinchStartDist)));
@@ -468,12 +517,15 @@
     });
 
     function clearPointer(event) {
+      const tap = event.type === "pointerup" && gesture && gesture.id === event.pointerId && !gesture.moved && pointers.size === 1;
       pointers.delete(event.pointerId);
       if (pointers.size === 1) {
         const leftover = pointList()[0];
         lastX = leftover.clientX;
         lastY = leftover.clientY;
       }
+      if (pointers.size === 0) gesture = null;
+      if (tap) removeTapped(event);
     }
 
     el.addEventListener("pointerup", clearPointer);
@@ -583,11 +635,18 @@
 
     if (contentRoot && arToolkitSource && arToolkitSource.ready && arToolkitContext) {
       arToolkitContext.update(arToolkitSource.domElement);
+      let found = -1;
       for (let i = 0; i < markerRoots.length; i += 1) {
         if (markerRoots[i].visible) {
-          markerGroups[i].add(contentRoot);
+          found = i;
           break;
         }
+      }
+      const anchor = nextAnchor(found, anchoredIndex);
+      if (anchor >= 0) {
+        if (found >= 0) markerGroups[found].add(contentRoot);
+        else markerRoots[anchor].visible = true;
+        anchoredIndex = anchor;
       }
     }
 
@@ -635,5 +694,8 @@
   const turnCheck = stepView({ scale: 1, rotX: 0, rotY: 0, rotZ: 0, x: 0, y: 0 }, "rotY", -0.4);
   if (stepCheck.scale !== 4 || shiftCheck.x !== -1.2 || turnCheck.rotY !== -0.4) {
     console.error("stepView check failed", stepCheck, shiftCheck, turnCheck);
+  }
+  if (nextAnchor(2, 0) !== 2 || nextAnchor(-1, 0) !== 0 || nextAnchor(-1, -1) !== -1) {
+    console.error("nextAnchor check failed");
   }
 })();
