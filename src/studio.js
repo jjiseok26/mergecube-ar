@@ -293,6 +293,7 @@ function makeSlot(face) {
   userGroup.add(fitGroup);
   faceRoot.add(userGroup);
   contentRoot.add(faceRoot);
+  faceRoot.userData.faceId = face.id;
   slots[face.id] = {
     id: face.id,
     faceRoot,
@@ -365,15 +366,32 @@ function render() {
   renderer.render(scene, camera);
 }
 
+function faceIdFromObject(object) {
+  let node = object;
+  while (node) {
+    if (node.userData?.faceId) return node.userData.faceId;
+    node = node.parent;
+  }
+  return null;
+}
+
 function pickFace(event) {
   if (dragging) return;
   const rect = canvas.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObject(cubeMesh, false)[0];
-  if (!hit) return;
-  const materialIndex = hit.face?.materialIndex ?? Math.floor(hit.faceIndex / 2);
+  const cubeHit = raycaster.intersectObject(cubeMesh, false)[0];
+  const modelHit = raycaster.intersectObject(contentRoot, true)[0];
+  if (modelHit && (!cubeHit || modelHit.distance <= cubeHit.distance)) {
+    const faceId = faceIdFromObject(modelHit.object);
+    if (faceId) {
+      selectFace(faceId);
+      return;
+    }
+  }
+  if (!cubeHit) return;
+  const materialIndex = cubeHit.face?.materialIndex ?? Math.floor(cubeHit.faceIndex / 2);
   const face = FACES.find((item) => item.materialIndex === materialIndex);
   if (face) selectFace(face.id);
 }
@@ -414,9 +432,9 @@ async function restore() {
     if (blob) await loadSlotFromBlob(slots[face.id], blob, faceMeta);
   }
 
-  selectFace(selectedId);
-  const filled = FACES.filter((face) => slots[face.id].blob).length;
-  say(filled ? "status.restored" : "status.pick", filled ? { count: filled } : null);
+  const filledFaces = FACES.filter((face) => slots[face.id].blob);
+  selectFace(filledFaces[0]?.id || selectedId);
+  say(filledFaces.length ? "status.restored" : "status.pick", filledFaces.length ? { count: filledFaces.length } : null);
 }
 
 FACES.forEach(makeSlot);
