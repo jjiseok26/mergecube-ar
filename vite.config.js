@@ -106,6 +106,7 @@ export default defineConfig({
         main: path.join(root, "index.html"),
         ar: path.join(root, "ar.html"),
         print: path.join(root, "print.html"),
+        help: path.join(root, "help.html"),
       },
     },
   },

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { cloneTransform, DEFAULT_TRANSFORM, emptyFaceMeta, FACES } from "./cube.js";
 import { filesFromDropEvent, loadModelFromFiles } from "./load-gltf.js";
@@ -44,6 +45,12 @@ camera.position.set(1.6, 1.2, 2.1);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+pmrem.dispose();
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -235,28 +242,20 @@ function selectFace(id) {
   setStatus(slot.blob ? `${face.label} 모델을 조작 중입니다.` : "이 면에 모델을 올리세요.");
 }
 
-function visibleMaterial(material, mesh) {
-  if (!material) return material;
-  const color = material.color?.clone?.() || new THREE.Color(0xffffff);
-  const emissive = material.emissive;
-  if (emissive && color.r + color.g + color.b < 0.04 && emissive.r + emissive.g + emissive.b > 0.04) color.copy(emissive);
-  return new THREE.MeshBasicMaterial({
-    color,
-    map: material.map || material.emissiveMap || null,
-    transparent: Boolean(material.transparent),
-    opacity: material.opacity ?? 1,
-    alphaTest: material.alphaTest || 0,
-    side: THREE.DoubleSide,
-    vertexColors: Boolean(mesh.geometry?.getAttribute?.("color")),
-  });
-}
-
 function keepMaterialColor(object) {
   object.traverse((child) => {
-    if (!child.isMesh) return;
-    const sources = Array.isArray(child.material) ? child.material : [child.material];
-    const next = sources.map((material) => visibleMaterial(material, child));
-    child.material = Array.isArray(child.material) ? next : next[0];
+    if (!child.isMesh || !child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      if (!material) continue;
+      material.side = THREE.DoubleSide;
+      if (child.geometry?.getAttribute?.("color")) material.vertexColors = true;
+      for (const key of ["map", "emissiveMap"]) {
+        const texture = material[key];
+        if (texture && "colorSpace" in texture) texture.colorSpace = THREE.SRGBColorSpace;
+      }
+      material.needsUpdate = true;
+    }
   });
 }
 

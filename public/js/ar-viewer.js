@@ -223,28 +223,16 @@
     return new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), new THREE.MeshNormalMaterial());
   }
 
-  function visibleMaterial(material, mesh) {
-    if (!material) return material;
-    const color = material.color?.clone?.() || new THREE.Color(0xffffff);
-    const emissive = material.emissive;
-    if (emissive && color.r + color.g + color.b < 0.04 && emissive.r + emissive.g + emissive.b > 0.04) color.copy(emissive);
-    return new THREE.MeshBasicMaterial({
-      color,
-      map: material.map || material.emissiveMap || null,
-      transparent: Boolean(material.transparent),
-      opacity: material.opacity ?? 1,
-      alphaTest: material.alphaTest || 0,
-      side: THREE.DoubleSide,
-      vertexColors: Boolean(mesh.geometry?.getAttribute?.("color")),
-    });
-  }
-
   function keepMaterialColor(object) {
     object.traverse((child) => {
-      if (!child.isMesh) return;
-      const sources = Array.isArray(child.material) ? child.material : [child.material];
-      const next = sources.map((material) => visibleMaterial(material, child));
-      child.material = Array.isArray(child.material) ? next : next[0];
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) {
+        if (!material) continue;
+        material.side = THREE.DoubleSide;
+        if (child.geometry?.getAttribute?.("color")) material.vertexColors = true;
+        material.needsUpdate = true;
+      }
     });
   }
 
@@ -328,12 +316,20 @@
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setClearColor(new THREE.Color("black"), 0);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.domElement.style.position = "absolute";
     renderer.domElement.style.inset = "0";
     renderer.domElement.style.touchAction = "none";
     document.body.appendChild(renderer.domElement);
+    if (THREE.RoomEnvironment && THREE.PMREMGenerator) {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+    }
     bindViewGestures(renderer.domElement);
   }
 

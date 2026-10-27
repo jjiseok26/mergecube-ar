@@ -367,8 +367,8 @@ input[type="range"] {
 }
 
 .cube-net {
-  --face: 132px;
-  --tab: 30px;
+  --face: 168px;
+  --tab: 38px;
   display: grid;
   grid-template-columns: var(--tab) var(--face) var(--face) var(--face) var(--tab);
   grid-template-rows: var(--tab) var(--face) var(--face) var(--face) var(--face);
@@ -489,6 +489,11 @@ input[type="range"] {
   }
 }
 
+@page {
+  size: A4 portrait;
+  margin: 6mm;
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -501,17 +506,56 @@ input[type="range"] {
   }
 
   .print-wrap {
-    padding: 8mm;
+    padding: 0;
     max-width: none;
   }
 
   .cube-net {
-    --face: 42mm;
-    --tab: 10mm;
+    --face: 56mm;
+    --tab: 13mm;
   }
 
   .net-key {
     color: #333;
     font-size: 10pt;
   }
+}
+
+.help-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 20px 72px;
+}
+
+.help-wrap h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  letter-spacing: -0.03em;
+}
+
+.help-wrap .lead {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.help-wrap section {
+  margin-top: 28px;
+}
+
+.help-wrap h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.help-wrap p,
+.help-wrap li {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.help-wrap ol,
+.help-wrap ul {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
 }

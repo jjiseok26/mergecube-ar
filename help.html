@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>이용 안내</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>큐브 AR 스튜디오</h1>
+            <p>인쇄한 큐브 위에 모델을 올립니다.</p>
+          </div>
+        </div>
+        <nav class="top-actions">
+          <a class="btn ghost" href="/">스튜디오</a>
+          <a class="btn ghost" href="/print.html">큐브 인쇄</a>
+          <a class="btn primary" href="/ar.html">AR 보기</a>
+        </nav>
+      </header>
+      <main class="help-wrap">
+        <h1>이용 안내</h1>
+        <p class="lead">큐브를 인쇄해 접은 뒤, 면에 모델을 올리고 태블릿 카메라로 보면 됩니다.</p>
+
+        <section>
+          <h2>1. 큐브 만들기</h2>
+          <ol>
+            <li>큐브 인쇄를 열고 인쇄합니다. 페이지에 맞게 축소하지 마세요. 마커가 작아지면 인식이 잘 안 됩니다.</li>
+            <li>바깥 실선을 자르고, 면과 날개 사이 점선은 산 접기합니다.</li>
+            <li>풀 날개 안쪽에 풀을 발라 마커가 바깥을 보게 정육면체로 붙입니다.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2>2. 모델 올리기</h2>
+          <ol>
+            <li>스튜디오에서 큐브 면이나 오른쪽 칸을 눌러 면을 고릅니다.</li>
+            <li>GLB 하나를 올리거나, glTF와 같은 폴더의 .bin, 텍스처를 함께 올립니다. 폴더째 놓아도 됩니다.</li>
+            <li>크기, 위치, 회전은 그 면에만 적용됩니다. 면에 맞추기는 모델을 면 위에 다시 앉힙니다.</li>
+            <li>모델의 색, 무늬, 금속·거친 정도는 파일에 들어 있는 그대로 보입니다.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2>3. 태블릿에서 보기</h2>
+          <ol>
+            <li>태블릿 QR을 누르고, 나온 주소가 https로 시작하는지 확인합니다.</li>
+            <li>태블릿은 같은 네트워크에서 Safari 또는 Chrome으로 엽니다. 카메라 앱이나 카카오톡 안의 브라우저에서는 카메라가 막힙니다.</li>
+            <li>AR 보기에서 카메라 시작을 누르고, 큐브 한 면이 화면을 크게 채우게 비춥니다.</li>
+            <li>한 손가락으로 드래그하면 모델이 회전하고, 두 손가락을 벌리거나 오므리면 크기가 바뀝니다. 두 손가락을 비틀면 한 번 더 회전합니다.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2>4. 카메라가 안 켜질 때</h2>
+          <ul>
+            <li>주소가 http이면 카메라를 쓸 수 없습니다. QR을 다시 만들어 https 주소로 여세요.</li>
+            <li>보안 경고가 나오면 고급을 누른 뒤 계속 또는 방문을 선택합니다. 이 사이트의 인증서를 브라우저가 확인하는 과정입니다.</li>
+            <li>권한을 거절했다면 주소창의 사이트 설정에서 카메라를 허용한 뒤 새로고침합니다.</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

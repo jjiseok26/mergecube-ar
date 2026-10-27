@@ -2,6 +2,7 @@ const PAGES = [
   { path: "/ar.html", label: "AR 보기" },
   { path: "/", label: "스튜디오" },
   { path: "/print.html", label: "큐브 인쇄" },
+  { path: "/help.html", label: "이용 안내" },
 ];
 
 function isLoopback(hostname) {
